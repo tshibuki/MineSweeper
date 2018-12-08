@@ -1,23 +1,23 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Diagnostics;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
+/// <summary>
+/// マインスイーパー
+/// </summary>
 namespace MineSweeper
 {
+    /// <summary>
+    /// フォーム
+    /// </summary>
     public partial class Form1 : Form
     {
         /// <summary>
         /// セルの大きさ
         /// </summary>
         private const int CellWidth = 32;
-        private const int FieldSizeY = 32;
+        private const int CellHeight = 32;
 
         /// <summary>
         /// 数字のフォントサイズ
@@ -43,6 +43,12 @@ namespace MineSweeper
         private const string Flag1 = "O";
         private const string Flag2 = "P";
 
+        /// <summary>
+        /// 機雷マーク
+        /// </summary>
+        private const string CharactorOfMine = "M";
+        private const string CharactorOfNoMine = " ";
+        private const string CharactorOfNg = "N";
 
         /// <summary>
         /// ゲーム盤
@@ -90,12 +96,23 @@ namespace MineSweeper
         /// <summary>
         /// Form1_Loadイベント処理
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
+        /// <param name="sender">送信元オブジェクト</param>
+        /// <param name="e">イベントデータ</param>
         private void Form1_Load(object sender, EventArgs e)
         {
+            comboBox1.SelectedIndex = GameLevel;
+            NewGame(GameLevel);
+            return;
+        }
+
+        /// <summary>
+        /// 新規ゲーム設定
+        /// </summary>
+        /// <param name="level">ゲームレベル</param>
+        private void NewGame(int level)
+        {
             // インスタンスの生成
-            classBoard = new ClassBoard(GameLevel);                 // (ToDo)ゲームレベル選択の機能を追加したらGameLevelを変更すること
+            classBoard = new ClassBoard(level);
             labelFront = new Label[classBoard.MaxX * classBoard.MaxY];  // ラベル配列の生成
             labelBack = new Label[classBoard.MaxX * classBoard.MaxY];   // ラベル配列の生成
 
@@ -109,8 +126,8 @@ namespace MineSweeper
                 //サイズと位置を設定する
                 labelFront[no].Location = new Point(
                     (no % classBoard.MaxX) * CellWidth,
-                    (no / classBoard.MaxY) * FieldSizeY);
-                labelFront[no].Size = new Size(CellWidth, FieldSizeY);
+                    (no / classBoard.MaxX) * CellHeight);
+                labelFront[no].Size = new Size(CellWidth, CellHeight);
                 labelFront[no].BorderStyle = BorderStyle.FixedSingle;
                 labelFront[no].BackColor = Color.LightGray;
                 labelFront[no].Font = new Font("Wingdings", FontSize);
@@ -122,25 +139,31 @@ namespace MineSweeper
                 labelBack[no].Font = new Font(labelBack[no].Font.OriginalFontName, FontSize);
                 //イベントハンドラに関連付け
                 //labelFront[no].Click += new EventHandler(labelField_Click);
-                labelFront[no].MouseDown += new MouseEventHandler(labelField_MouseDown);    //右クリックを受けるためにClickではなくMouseDownを使用
+                labelFront[no].MouseDown += new MouseEventHandler(LabelFront_MouseDown);    //右クリックを受けるためにClickではなくMouseDownを使用
+                labelBack[no].MouseDown += new MouseEventHandler(LabelBackt_MouseDown);
             }
-            ResumeLayout(false);
 
             //フォームにコントロールを追加
             panel2.Controls.AddRange(labelFront);
             panel2.Controls.AddRange(labelBack);
 
             // パネルの幅調整
-            panel2.Size = new Size(CellWidth * classBoard.MaxX + 4, FieldSizeY * classBoard.MaxY + 4);
+            panel2.Size = new Size(CellWidth * classBoard.MaxX + 4, CellHeight * classBoard.MaxY + 4);
             panel1.Size = new Size(panel2.Size.Width, 49);
             textBoxMine.Location = new Point(3, 3);
             textBoxTime.Location = new Point((panel2.Width - textBoxTime.Width) - 7, 3);
             buttonReset.Location = new Point((panel2.Width - buttonReset.Width) / 2, 3);
 
-            // フォームの幅調整
+            // フォームの大きさ調整
             Width = panel2.Size.Width + panel2.Location.X * 2 + 16;
+            Height = panel2.Size.Height + panel2.Location.Y + 52;
 
+            ResumeLayout(false);
+
+            // ゲーム状況を初期化
             ResetGame();
+
+            return;
         }
 
         /// <summary>
@@ -151,17 +174,19 @@ namespace MineSweeper
         private void DispNumber(TextBox textBox, int num)
         {
             textBox.Text = num.ToString("000");
+            return;
         }
 
         /// <summary>
         /// リセットボタンのクリックイベント
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void buttonReset_Click(object sender, EventArgs e)
+        /// <param name="sender">送信元オブジェクト</param>
+        /// <param name="e">イベントデータ</param>
+        private void ButtonReset_Click(object sender, EventArgs e)
         {
             // ゲームの初期化
             ResetGame();
+            return;
         }
 
         /// <summary>
@@ -169,6 +194,7 @@ namespace MineSweeper
         /// </summary>
         private void ResetGame()
         {
+            // すべてのセルの状態を初期化
             foreach (var item in labelFront)
             {
                 item.Visible = true;
@@ -192,33 +218,31 @@ namespace MineSweeper
 
             // 初回クリックフラグON
             flagFirstClick = true;
+
+            return;
         }
 
         /// <summary>
-        /// 盤上のセルのクリックイベント
+        /// 初回クリック時の処理
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void labelBoard_Click(object sender, EventArgs e)
+        /// <param name="no">セルの通し番号</param>
+        private void CheckStart(int no)
         {
-            Label item = (Label)sender;
-            int no = (int)item.Tag;
-
             // 最初のクリック
             if (flagFirstClick)
             {
                 flagFirstClick = false;
-                classBoard.FirstClick(no);
+                classBoard.LayoutMine(no);
 
                 for (int index = 0; index < labelFront.Length; index++)
                 {
                     if (classBoard.CellNum[index] == ClassBoard.NumberOfMine)
                     {
-                        labelBack[index].Text = ClassBoard.CharactorOfMine;
+                        labelBack[index].Text = CharactorOfMine;
                     }
                     else if (classBoard.CellNum[index] == ClassBoard.NumberOfNoMine)
                     {
-                        labelBack[index].Text = ClassBoard.CharactorOfNoMine;
+                        labelBack[index].Text = CharactorOfNoMine;
                     }
                     else
                     {
@@ -232,49 +256,47 @@ namespace MineSweeper
             }
 
             Debug.WriteLine("labelField_Click no=" + no.ToString() + " num=" + labelBack[no].Text);
+            return;
         }
 
         /// <summary>
-        /// フィールドセルのマウスダウンイベントハンドラ
+        /// フィールドセル(前面)のマウスダウンイベントハンドラ
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void labelField_MouseDown(object sender, MouseEventArgs e)
+        /// <param name="sender">送信元オブジェクト</param>
+        /// <param name="e">イベントデータ</param>
+        private void LabelFront_MouseDown(object sender, MouseEventArgs e)
         {
             Label label = (Label)sender;
             int index = (int)label.Tag;
 
-            Debug.WriteLine("labelField_MouseDown " + e.Button.ToString());
+            Debug.WriteLine("LabelFront_MouseDown " + e.Button.ToString());
 
+            // マウスのボタンに応じて処理を行う
             switch (e.Button)
             {
-                case MouseButtons.Left:
+                case MouseButtons.Left:                             // 左ボタン：セルを開く操作
                     if (label.Text == Space)
                     {
-                        labelBoard_Click(sender, e);
-                        if (labelBack[index].Text == ClassBoard.CharactorOfMine)
+                        CheckStart(index);                          // 初回クリック時の処理
+
+                        if (labelBack[index].Text == CharactorOfMine)
                         {
-                            timer1.Stop();                          //タイマストップ
-                            GameOver(false, index);
-                            MessageBox.Show("アウト");
-                            ResetGame();
+                            GameOver(false, index);                 // ミス
                         }
                         else
                         {
-                            OpenCell(index % classBoard.MaxX, index / classBoard.MaxX);
+                            OpenCell(index);                        // セルを開く
 
                             //クリア確認
                             if (CheckGameClear())
                             {
-                                timer1.Stop();                      //タイマストップ
                                 GameOver(true, -1);                 //クリア
-                                MessageBox.Show("クリア");
-                                ResetGame();
                             }
                         }
                     }
                     break;
-                case MouseButtons.Right:
+
+                case MouseButtons.Right:                            // 右ボタン：旗の操作
                     if (label.Text == Space)
                     {
                         mineCount--;
@@ -295,18 +317,108 @@ namespace MineSweeper
                     }
                     Debug.WriteLine("label.Text=" + label.Text);
                     break;
+
                 default:
                     break;
             }
+
+            return;
+        }
+
+        /// <summary>
+        /// フィールドセル(背面)のマウスダウンイベントハンドラ
+        /// </summary>
+        /// <param name="sender">送信元オブジェクト</param>
+        /// <param name="e">イベントデータ</param>
+        private void LabelBackt_MouseDown(object sender, MouseEventArgs e)
+        {
+            Label label = (Label)sender;
+            int index = (int)label.Tag;
+
+            Debug.WriteLine("LabelBack_MouseDown " + e.Button.ToString());
+
+            //if (labelFront[index].Visible == true)                  // 開いていないところは無視
+            //{
+            //    return;
+            //}
+
+            // マウスのボタンに応じて処理を行う
+            switch (Control.MouseButtons)
+            {
+                case MouseButtons.Left:                             // 左ボタン
+                case MouseButtons.Right:                            // 右ボタン
+                    break;                                          // 単独の時は無視する
+
+                case MouseButtons.Left | MouseButtons.Right:        // 左右ボタン：八方向のセルを開く
+
+                    if (label.Text != Space)
+                    {
+                        // 周囲8方向
+                        int[] cellno = {
+                            classBoard.GetIndexEightSide(index, ClassBoard.CellDirection.UpperLeft),
+                            classBoard.GetIndexEightSide(index, ClassBoard.CellDirection.Upper),
+                            classBoard.GetIndexEightSide(index, ClassBoard.CellDirection.UpperRight),
+                            classBoard.GetIndexEightSide(index, ClassBoard.CellDirection.Right),
+                            classBoard.GetIndexEightSide(index, ClassBoard.CellDirection.DownRight),
+                            classBoard.GetIndexEightSide(index, ClassBoard.CellDirection.Down),
+                            classBoard.GetIndexEightSide(index, ClassBoard.CellDirection.DownLeft),
+                            classBoard.GetIndexEightSide(index, ClassBoard.CellDirection.Left),
+                        };
+
+                        foreach (int no in cellno)
+                        {
+                            if (no < 0)
+                            {
+                                continue;
+                            }
+                            else if (labelFront[no].Text != Space)
+                            {                                       // 旗の立っているセルは開かない
+                                continue;
+                            }
+
+                            if (labelBack[no].Text == CharactorOfMine)
+                            {
+                                GameOver(false, no);                // ミス
+                                break;
+                            }
+                            else
+                            {
+                                OpenCell(no);                       // セルを開く
+
+                                //クリア確認
+                                if (CheckGameClear())
+                                {
+                                    GameOver(true, -1);             //クリア
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    break;
+
+                default:
+                    break;
+            }
+
+            return;
         }
 
         /// <summary>
         /// 空白セルの表示
         /// </summary>
-        private void OpenCell(int x, int y)
+        private void OpenCell(int index)
         {
-            // XY座標からindexへ変換
-            int index = y * classBoard.MaxX + x;
+            // 盤外のセルは対象外とする
+            if (index < 0)
+            {
+                return;
+            }
+
+            // 旗のあるセルは処理しない
+            if (labelFront[index].Text != Space)
+            {
+                return;
+            }
 
             // 既に開かれたセルは処理しない
             if (labelFront[index].Visible == false)
@@ -319,56 +431,20 @@ namespace MineSweeper
             cellCount--;
 
             // 空白セルの判定
-            if (labelBack[index].Text == ClassBoard.CharactorOfNoMine)
+            if (classBoard.CellNum[index] == ClassBoard.NumberOfNoMine)
             {
-                // 上へ
-                if (y > 0)
-                {
-                    OpenCell(x, y - 1);
- 
-                    // 右上へ
-                    if (x < classBoard.MaxX - 1)
-                    {
-                        OpenCell(x + 1, y - 1);
-                    }
-                }
-
-                // 右へ
-                if (x < classBoard.MaxX - 1)
-                {
-                    OpenCell(x + 1, y);
-
-                    // 右下へ
-                    if (y < classBoard.MaxY - 1)
-                    {
-                        OpenCell(x + 1, y + 1);
-                    }
-                }
-
-                // 下へ
-                if (y < classBoard.MaxY - 1)
-                {
-                    OpenCell(x, y + 1);
-
-                    // 左下へ
-                    if (x > 0)
-                    {
-                        OpenCell(x - 1, y + 1);
-                    }
-                }
-
-                // 左へ
-                if (x > 0)
-                {
-                    OpenCell(x - 1, y);
-
-                    // 左上へ
-                    if (y > 0)
-                    {
-                        OpenCell(x - 1, y - 1);
-                    }
-                }
+                // 周囲8方向
+                OpenCell(classBoard.GetIndexEightSide(index, ClassBoard.CellDirection.UpperLeft));
+                OpenCell(classBoard.GetIndexEightSide(index, ClassBoard.CellDirection.Upper));
+                OpenCell(classBoard.GetIndexEightSide(index, ClassBoard.CellDirection.UpperRight));
+                OpenCell(classBoard.GetIndexEightSide(index, ClassBoard.CellDirection.Right));
+                OpenCell(classBoard.GetIndexEightSide(index, ClassBoard.CellDirection.DownRight));
+                OpenCell(classBoard.GetIndexEightSide(index, ClassBoard.CellDirection.Down));
+                OpenCell(classBoard.GetIndexEightSide(index, ClassBoard.CellDirection.DownLeft));
+                OpenCell(classBoard.GetIndexEightSide(index, ClassBoard.CellDirection.Left));
             }
+
+            return;
         }
 
         /// <summary>
@@ -394,38 +470,68 @@ namespace MineSweeper
         /// <summary>
         /// ゲームオーバー
         /// </summary>
+        /// <param name="smile">顔の種類</param>
+        /// <param name="no">最後にクリックしたセルの通し番号</param>
         private void GameOver(bool smile, int no)
         {
-            //フェイスマーク設定
-            if (smile)
-            {
-                buttonReset.Text = Face1;
-            }
-            else
-            {
-                buttonReset.Text = Face3;
-            }
+            timer1.Stop();                          //タイマストップ
 
             //正解表示
             for (int index = 0; index < labelFront.Length; index++)
             {
                 if (index == no)
                 {
-                    labelFront[index].Text = ClassBoard.CharactorOfNg;
+                    labelFront[index].Text = CharactorOfNg;
                     labelFront[index].Visible = true;
                 }
                 else if (classBoard.CellNum[index] == ClassBoard.NumberOfMine)
                 {
-                    labelFront[index].Text = ClassBoard.CharactorOfMine;
+                    labelFront[index].Text = CharactorOfMine;
+                    labelFront[index].Visible = true;
                 }
             }
+
+            //フェイスマーク設定
+            if (smile)
+            {
+                buttonReset.Text = Face1;
+                MessageBox.Show("クリア");
+            }
+            else
+            {
+                buttonReset.Text = Face3;
+                MessageBox.Show("アウト");
+            }
+
+            ResetGame();
         }
 
-        //タイマチックイベント
-        private void timer1_Tick(object sender, EventArgs e)
+        /// <summary>
+        /// タイマチックイベント
+        /// </summary>
+        /// <param name="sender">送信元オブジェクト</param>
+        /// <param name="e">イベントデータ</param>
+        private void Timer1_Tick(object sender, EventArgs e)
         {
             timeCount++;
             DispNumber(textBoxTime, timeCount);
+        }
+
+        /// <summary>
+        /// レベル選択コンボボックス設定イベント
+        /// </summary>
+        /// <param name="sender">送信元オブジェクト</param>
+        /// <param name="e">送信先オブジェクト</param>
+        private void ComboBox1_SelectionChangeCommitted(object sender, EventArgs e)
+        {
+            ComboBox comboBox = (ComboBox)sender;
+            int level = comboBox.SelectedIndex;
+
+            if ((level >= 0) && (level < 3))
+            {
+                panel2.Controls.Clear();
+                NewGame(level);
+            }
         }
     }
 }

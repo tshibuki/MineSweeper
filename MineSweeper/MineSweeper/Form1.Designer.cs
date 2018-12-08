@@ -30,6 +30,7 @@
         {
             this.components = new System.ComponentModel.Container();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.comboBox1 = new System.Windows.Forms.ComboBox();
             this.buttonReset = new System.Windows.Forms.Button();
             this.textBoxTime = new System.Windows.Forms.TextBox();
             this.textBoxMine = new System.Windows.Forms.TextBox();
@@ -41,6 +42,7 @@
             // panel1
             // 
             this.panel1.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
+            this.panel1.Controls.Add(this.comboBox1);
             this.panel1.Controls.Add(this.buttonReset);
             this.panel1.Controls.Add(this.textBoxTime);
             this.panel1.Controls.Add(this.textBoxMine);
@@ -49,18 +51,32 @@
             this.panel1.Size = new System.Drawing.Size(346, 49);
             this.panel1.TabIndex = 0;
             // 
+            // comboBox1
+            // 
+            this.comboBox1.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.comboBox1.FormattingEnabled = true;
+            this.comboBox1.Items.AddRange(new object[] {
+            "初級",
+            "中級",
+            "上級"});
+            this.comboBox1.Location = new System.Drawing.Point(76, 12);
+            this.comboBox1.Name = "comboBox1";
+            this.comboBox1.Size = new System.Drawing.Size(50, 20);
+            this.comboBox1.TabIndex = 3;
+            this.comboBox1.SelectionChangeCommitted += new System.EventHandler(this.ComboBox1_SelectionChangeCommitted);
+            // 
             // buttonReset
             // 
             this.buttonReset.BackColor = System.Drawing.Color.Yellow;
             this.buttonReset.Font = new System.Drawing.Font("Wingdings", 24F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(2)));
             this.buttonReset.ForeColor = System.Drawing.Color.Black;
-            this.buttonReset.Location = new System.Drawing.Point(152, 3);
+            this.buttonReset.Location = new System.Drawing.Point(152, 2);
             this.buttonReset.Name = "buttonReset";
             this.buttonReset.Size = new System.Drawing.Size(40, 40);
             this.buttonReset.TabIndex = 0;
             this.buttonReset.Text = "J";
             this.buttonReset.UseVisualStyleBackColor = false;
-            this.buttonReset.Click += new System.EventHandler(this.buttonReset_Click);
+            this.buttonReset.Click += new System.EventHandler(this.ButtonReset_Click);
             // 
             // textBoxTime
             // 
@@ -101,7 +117,7 @@
             // 
             // timer1
             // 
-            this.timer1.Tick += new System.EventHandler(this.timer1_Tick);
+            this.timer1.Tick += new System.EventHandler(this.Timer1_Tick);
             // 
             // Form1
             // 
@@ -129,6 +145,7 @@
         private System.Windows.Forms.TextBox textBoxTime;
         private System.Windows.Forms.Button buttonReset;
         private System.Windows.Forms.Timer timer1;
+        private System.Windows.Forms.ComboBox comboBox1;
     }
 }
 
